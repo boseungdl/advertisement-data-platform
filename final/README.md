@@ -25,6 +25,54 @@ final/
 
 ---
 
+## 실행 (Bootstrap)
+
+> 첫 빌드는 10~20분 소요 (Iceberg/AWS JAR 4개 다운로드). 두 번째부터는 캐시되어 빠름.
+
+### 1. 컨테이너 띄우기
+
+```bash
+cd final/infra
+docker compose up -d --build              # spark-iceberg 빌드 + 실행
+docker compose --profile streaming up -d  # kafka + zookeeper + kafka-ui 추가
+docker compose ps                         # 4개 모두 running/healthy 확인
+```
+
+### 2. 접속 확인
+
+| 항목 | 주소 | 비고 |
+|---|---|---|
+| Jupyter Notebook | http://localhost:8888 | 토큰: `iceberg` |
+| Kafka UI | http://localhost:8090 | 좌측 cluster `local` 보이면 OK |
+| Spark UI | http://localhost:4040 | Spark 잡 실행 중에만 활성 |
+
+### 3. Iceberg 패키지 로드 검증
+
+```bash
+docker exec -it spark-iceberg pyspark
+# 셸이 뜨면 종료 (Ctrl+D). 에러 없으면 OK.
+```
+
+### 가능한 문제
+
+| 증상 | 원인 / 해결 |
+|---|---|
+| 포트 충돌 (8888/8090/9092) | 다른 프로세스 점유 → `docker-compose.yml`의 host 포트 변경 |
+| Docker Desktop 안 켜짐 | 실행 후 재시도 |
+| `~/.aws/` mount 실패 | AWS 자격증명은 S1.4에서 셋업. 임시: `mkdir ~/.aws` 빈 폴더 또는 해당 mount 라인 주석 |
+| 첫 빌드 매우 느림 | 정상 (JAR 다운로드 진행). `docker compose logs -f spark-iceberg`로 진행 확인 |
+
+### 종료
+
+```bash
+docker compose --profile streaming down
+docker compose down
+```
+
+> 🔄 PR 2(광고 도메인 맞춤)에서 컨테이너/서비스 이름과 mount 경로가 final/ 구조에 맞춰 정렬될 예정.
+
+---
+
 ## 1. 도메인 정의 + 핵심 KPI 3개
 
 ### 도메인
