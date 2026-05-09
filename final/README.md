@@ -49,7 +49,7 @@ docker compose ps                         # 4개 모두 running/healthy 확인
 ### 3. Iceberg 패키지 로드 검증
 
 ```bash
-docker exec -it spark-iceberg pyspark
+docker exec -it spark-ads pyspark
 # 셸이 뜨면 종료 (Ctrl+D). 에러 없으면 OK.
 ```
 

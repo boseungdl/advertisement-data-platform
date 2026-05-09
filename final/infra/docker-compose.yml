@@ -7,11 +7,11 @@
 
 services:
   # ─── Jupyter + PySpark + Iceberg ───────────────────────
-  spark-iceberg:
+  spark-ads:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: spark-iceberg
+    container_name: spark-ads
     ports:
       - "8888:8888"   # Jupyter Notebook
       - "4040:4040"   # Spark UI (job 실행 중에만 활성)
@@ -28,7 +28,7 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-northeast-2}
       AWS_SDK_LOAD_CONFIG: "1"
     networks:
-      - lakehouse
+      - meta-ads
 
   # ─── Kafka (Week 2+: 스트리밍 실습용) ─────────────────
   zookeeper:
@@ -45,7 +45,7 @@ services:
       start_period: 10s
     profiles: ["streaming"]
     networks:
-      - lakehouse
+      - meta-ads
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -72,7 +72,7 @@ services:
       start_period: 20s
     profiles: ["streaming"]
     networks:
-      - lakehouse
+      - meta-ads
 
   # Kafka UI (선택) - 토픽/메시지 시각화
   kafka-ui:
@@ -87,11 +87,11 @@ services:
       - kafka
     profiles: ["streaming"]
     networks:
-      - lakehouse
+      - meta-ads
 
 volumes:
   warehouse:
 
 networks:
-  lakehouse:
+  meta-ads:
     driver: bridge
