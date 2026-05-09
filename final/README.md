@@ -25,6 +25,103 @@ final/
 
 ---
 
+## AWS 셋업 (S1.3 — 최초 1회)
+
+> Iceberg/Glue/Athena/QuickSight를 위한 AWS 자원 준비.
+> 비용: S3 5GB + Glue 100만 객체까지 무료. 보수적으로 **월 5만원(약 $40) 한도 알람** 권장.
+> ⚠️ Access key는 절대 git에 들어가면 안 됨 (`.env`는 `.gitignore`에 등록됨).
+
+### 1. IAM 사용자 생성 (실습용 별도 권장)
+
+- AWS 콘솔 → **IAM → Users → Create user**
+- Name: `iceberg-lab` (CLI 프로필명과 일치)
+- Console access: 비활성 (CLI만 사용)
+- Permissions: `AdministratorAccess` 직접 부여 (실습 한정 — 운영은 최소권한 원칙)
+- 생성 후 **Security credentials → Create access key → CLI**
+- Access Key ID / Secret을 **즉시 복사** (Secret은 이 화면 벗어나면 다시 못 봄)
+
+### 2. AWS CLI 프로필 `iceberg-lab`
+
+```bash
+aws configure --profile iceberg-lab
+# AWS Access Key ID     [None]: <위에서 복사>
+# AWS Secret Access Key [None]: <위에서 복사>
+# Default region name   [None]: ap-northeast-2
+# Default output format [None]: json
+
+# 동작 확인
+aws sts get-caller-identity --profile iceberg-lab
+```
+
+### 3. S3 버킷 + prefix 생성
+
+```bash
+# 버킷 이름은 전 세계 유일 — 본인 이름으로 교체
+export BUCKET=meta-ads-lakehouse-<random>
+export PREFIX=lakehouse/ads
+
+aws s3 mb s3://$BUCKET --profile iceberg-lab --region ap-northeast-2
+
+# prefix placeholder (콘솔에서 폴더처럼 보이게)
+aws s3api put-object --bucket $BUCKET --key $PREFIX/ \
+  --profile iceberg-lab --region ap-northeast-2
+```
+
+> 사용 경로:
+> - `s3://$BUCKET/$PREFIX/processed_events/` ← Silver
+> - `s3://$BUCKET/$PREFIX/campaign_summary_daily/` ← Gold
+> - `s3://$BUCKET/$PREFIX/checkpoints/` ← Spark Streaming(향후)
+
+### 4. Glue Data Catalog DB
+
+```bash
+aws glue create-database \
+  --database-input '{"Name":"iceberg_ads_db","Description":"Meta Ads Lakehouse Iceberg tables"}' \
+  --profile iceberg-lab --region ap-northeast-2
+
+aws glue get-database --name iceberg_ads_db \
+  --profile iceberg-lab --region ap-northeast-2
+```
+
+### 5. 비용 알람 (월 약 $40 한도)
+
+AWS 콘솔 → **Billing → Budgets → Create budget**
+
+- Budget type: Cost budget
+- Name: `meta-ads-lakehouse-monthly`
+- Amount: **$40 USD / month**
+- Alert: 80%(≈$32) 도달 시 본인 이메일로 자동
+
+### 6. `.env` 채우기
+
+```bash
+cd final/infra
+cp .env.example .env
+
+# .env 열어 본인 값으로 교체:
+#   AWS_PROFILE=iceberg-lab        (기본값 OK)
+#   S3_BUCKET=<위에서 만든 버킷>
+#   S3_PREFIX=lakehouse/ads        (기본값 OK)
+#   ICEBERG_DB=iceberg_ads_db      (기본값 OK)
+```
+
+→ AWS 셋업 끝. 다음은 [실행 (Bootstrap)](#실행-bootstrap).
+
+### 정리 (실습 종료 후, 비용 막기)
+
+```bash
+# S3 버킷 비우고 삭제
+aws s3 rm s3://$BUCKET --recursive --profile iceberg-lab
+aws s3 rb s3://$BUCKET --profile iceberg-lab
+
+# Glue DB 삭제
+aws glue delete-database --name iceberg_ads_db --profile iceberg-lab
+
+# IAM 사용자 Access key Deactivate → Delete (또는 사용자 자체 삭제)
+```
+
+---
+
 ## 실행 (Bootstrap)
 
 > 첫 빌드는 10~20분 소요 (Iceberg/AWS JAR 4개 다운로드). 두 번째부터는 캐시되어 빠름.
