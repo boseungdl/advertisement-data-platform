@@ -21,9 +21,11 @@ services:
       - ../code/ddl:/home/jovyan/ddl                # Iceberg DDL
       - ../code/health-queries:/home/jovyan/health  # 헬스 쿼리
       - ./data:/home/jovyan/data                    # 입력 데이터 (Criteo CSV 등, gitignore)
-      - warehouse:/home/jovyan/warehouse            # 로컬 raw zone (named volume)
       - ${HOME}/.aws:/home/jovyan/.aws:ro           # AWS 자격증명 (빈 폴더라도 ~/.aws 필요)
+      # ADR-008: warehouse named volume 제거 (Bronze는 S3에 직접 저장)
     environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
       JUPYTER_TOKEN: iceberg
       # AWS (S1.4에서 실제 자격증명 주입)
       AWS_PROFILE: ${AWS_PROFILE:-iceberg-lab}
@@ -98,9 +100,6 @@ services:
     profiles: ["streaming"]
     networks:
       - meta-ads
-
-volumes:
-  warehouse:
 
 networks:
   meta-ads:

@@ -67,10 +67,11 @@ aws s3api put-object --bucket $BUCKET --key $PREFIX/ \
   --profile iceberg-lab --region ap-northeast-2
 ```
 
-> 사용 경로:
-> - `s3://$BUCKET/$PREFIX/processed_events/` ← Silver
-> - `s3://$BUCKET/$PREFIX/campaign_summary_daily/` ← Gold
-> - `s3://$BUCKET/$PREFIX/checkpoints/` ← Spark Streaming(향후)
+> 사용 경로 (ADR-008 — 모든 데이터를 S3에):
+> - `s3://$BUCKET/$PREFIX/raw/ad-events/` ← **Bronze** (raw parquet, 90일 보존)
+> - `s3://$BUCKET/$PREFIX/checkpoints/raw-ad-events/` ← Spark Streaming 체크포인트
+> - `s3://$BUCKET/$PREFIX/processed_events/` ← Silver (Iceberg)
+> - `s3://$BUCKET/$PREFIX/campaign_summary_daily/` ← Gold (Iceberg)
 
 ### 4. Glue Data Catalog DB
 
