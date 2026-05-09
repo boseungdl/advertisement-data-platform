@@ -122,6 +122,72 @@ aws glue delete-database --name iceberg_ads_db --profile iceberg-lab
 
 ---
 
+## 데이터 준비 (S1.5 — 최초 1회)
+
+> Criteo Attribution Dataset (16.4M 이벤트 / 30일 / 700+ 캠페인) → Bronze 입력 CSV 생성.
+> 풀스케일은 디스크 1~2GB. 빠르게 시작하려면 샘플 100K부터.
+
+### 1. 원본 다운로드
+
+다음 중 한 곳에서 `criteo_attribution_dataset.tsv.gz` (653MB) 받아 `final/infra/data/`에 저장:
+
+- **HuggingFace 미러** (가장 쉬움): https://huggingface.co/datasets/criteo/criteo-attribution-dataset
+- 공식: https://ailab.criteo.com/criteo-attribution-modeling-bidding-dataset/ (신청 폼)
+- Kaggle 미러: https://www.kaggle.com/datasets/sharatsachin/criteo-attribution-modeling
+
+```bash
+# 다운로드 후
+mkdir -p final/infra/data
+mv ~/Downloads/criteo_attribution_dataset.tsv.gz final/infra/data/
+```
+
+### 2. CSV 변환 (호스트에서 실행)
+
+```bash
+# 권장: 100만건 샘플
+python final/code/pipelines/prepare_criteo_data.py \
+  --input final/infra/data/criteo_attribution_dataset.tsv.gz \
+  --output final/infra/data \
+  --sample 1000000
+
+# 빠른 테스트: 10만건
+python final/code/pipelines/prepare_criteo_data.py \
+  --input final/infra/data/criteo_attribution_dataset.tsv.gz \
+  --output final/infra/data \
+  --sample 100000
+
+# 풀스케일 (디스크 여유 있을 때)
+python final/code/pipelines/prepare_criteo_data.py \
+  --input final/infra/data/criteo_attribution_dataset.tsv.gz \
+  --output final/infra/data \
+  --sample 16400000
+```
+
+### 3. 검증
+
+스크립트가 마지막에 자동 출력:
+
+```
+[전체]
+  총 이벤트:       1,000,000건
+  클릭:               XX,XXX건  (CTR X.XX%)
+  전환:                X,XXX건  (CVR X.XX% of clicks)
+  총 비용:       $XX,XXX.XX
+  평균 전환지연:   XX.X시간
+  캠페인 수:        ~700
+  기간:           2026-04-01 00:00 ~ 2026-04-30 23:59
+```
+
+컨테이너 안에서 확인:
+```bash
+docker exec -it spark-ads ls -lh /home/jovyan/data/
+# ad_events.csv, ad_events_sample.csv, ad_events_batch2.csv 보이면 OK
+```
+
+> `final/infra/data/`는 `.gitignore`에 등록되어 있어 데이터 자체는 git에 포함되지 않음.
+
+---
+
 ## 실행 (Bootstrap)
 
 > 첫 빌드는 10~20분 소요 (Iceberg/AWS JAR 4개 다운로드). 두 번째부터는 캐시되어 빠름.
