@@ -7,6 +7,24 @@
 
 ---
 
+## 디렉토리 구조
+
+```
+final/
+├── README.md           ← 지금 이 파일 (평가 답변 9개 섹션)
+├── infra/              🔄 환경 구성 (Epic 1) — docker-compose, Dockerfile, .env.example, AWS 셋업
+├── code/
+│   ├── ddl/            🔄 테이블 정의 (Epic 3, 4) — silver.sql, gold.sql
+│   ├── pipelines/      🔄 처리 로직 (Epic 2~4) — kafka_to_bronze.py, bronze_to_silver.py, silver_to_gold.py
+│   └── health-queries/ 🔄 운영 헬스 쿼리 (Epic 6) — 5~10개 SQL
+├── orchestration/      🔄 Airflow DAG (Epic 5) — silver merge / gold summary / iceberg compaction·expire·orphan
+└── dashboard/          🔄 BI 산출물 (Epic 6) — QuickSight 스크린샷 + 데이터셋 정의
+```
+
+빈 폴더는 `.gitkeep`만 둔 상태. 실제 파일은 해당 Epic에서 채워집니다.
+
+---
+
 ## 1. 도메인 정의 + 핵심 KPI 3개
 
 ### 도메인
