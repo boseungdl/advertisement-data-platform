@@ -12,7 +12,7 @@
 ```
 final/
 ├── README.md           ← 지금 이 파일 (평가 답변 9개 섹션)
-├── infra/              🔄 환경 구성 (Epic 1) — docker-compose, Dockerfile, .env.example, AWS 셋업
+├── infra/              ✅ 환경 구성 (S1.1 완료) — docker-compose.yml, Dockerfile, requirements.txt, .env.example
 ├── code/
 │   ├── ddl/            🔄 테이블 정의 (Epic 3, 4) — silver.sql, gold.sql
 │   ├── pipelines/      🔄 처리 로직 (Epic 2~4) — kafka_to_bronze.py, bronze_to_silver.py, silver_to_gold.py
@@ -33,7 +33,15 @@ final/
 
 ```bash
 cd final/infra
-docker compose up -d --build              # spark-iceberg 빌드 + 실행
+
+# (최초 1회) 환경 변수 파일 준비 — 본인 값으로 수정
+cp .env.example .env
+
+# (Windows에서 ~/.aws 폴더 없으면 1회 생성)
+mkdir -p ~/.aws
+
+# 컨테이너 빌드 + 실행
+docker compose up -d --build              # spark-ads 빌드 + 실행
 docker compose --profile streaming up -d  # kafka + zookeeper + kafka-ui 추가
 docker compose ps                         # 4개 모두 running/healthy 확인
 ```
@@ -69,7 +77,7 @@ docker compose --profile streaming down
 docker compose down
 ```
 
-> 🔄 PR 2(광고 도메인 맞춤)에서 컨테이너/서비스 이름과 mount 경로가 final/ 구조에 맞춰 정렬될 예정.
+> ✅ S1.1 완료 — 컨테이너 이름 `spark-ads`, network `meta-ads`, mount 경로는 `final/code/`와 직접 연결됨.
 
 ---
 
