@@ -1,0 +1,8 @@
+/실습/*
+.env
+
+# Claude Code local settings
+.claude/
+
+# External demo repo (separate git history)
+iceberg-lakehouse-lab/
