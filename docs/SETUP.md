@@ -121,6 +121,69 @@ aws glue delete-database --name iceberg_ads_db --profile iceberg-lab
 
 ---
 
+## 데이터 본질·구조 (Criteo Attribution Dataset)
+
+> 데이터 자체가 무엇이고, 우리 파이프라인에서 어떻게 쪼개져 흐르는지 한 페이지로 설명.
+
+### Criteo Attribution이 뭔가 한 줄로
+
+> **30일치 실제 광고 운영 로그.** 사용자가 어느 광고를 봤고(노출), 클릭했고, 그 후 며칠 안에 사이트에서 구매·가입(전환)했는지를 한 행에 다 담아둔 데이터. 광고 도메인 학술 표준 데이터셋 (Diemert et al., 2017).
+
+규모: **16,468,027 행 × 22 컬럼 / 30일 / 약 700개 캠페인** / TSV.GZ 약 653MB.
+
+### 22 컬럼이 무엇인지 — 5그룹으로 쪼개서 보기
+
+| 그룹 | 컬럼 | 의미 |
+|---|---|---|
+| **시간** | `timestamp`, `conversion_timestamp` | 광고 노출 시각, 전환 시각 (둘 다 상대 초) |
+| **사용자/캠페인** | `uid`, `campaign` | 사용자 ID(해시), 캠페인 ID |
+| **이벤트 결과** | `click` (0/1), `conversion` (0/1), `attribution` (0/1) | 이 노출이 클릭됐나, 전환됐나, attribution 받았나 |
+| **클릭 행동** | `click_pos`, `click_nb`, `time_since_last_click` | 클릭 위치, 누적 클릭 수, 직전 클릭과의 간격 |
+| **비용** | `cost`, `cpo` | 광고비, CPO(Cost Per Order) |
+| **익명 카테고리** | `cat1` ~ `cat9` | 광고/사용자 익명화 분류 (광고주·매체 등) |
+
+### ⚠️ 핵심 — 1 row의 의미
+
+**Criteo 원본은 1 row = 1 노출(impression) 이벤트**. 그 노출이:
+- 클릭됐으면 `click=1` (안 됐으면 0)
+- 그 사용자가 전환했으면 `conversion=1`, `conversion_timestamp`에 전환 시각 기록
+
+즉 **노출/클릭/전환이 행으로 쪼개진 게 아니라 한 행에 컬럼으로 들어 있음**. 실제 광고 운영에서는 노출은 즉시, 클릭은 몇 초 뒤, 전환은 며칠 뒤 도착하는데 — Criteo는 이걸 사후 결합해서 wide format으로 제공.
+
+### 우리 파이프라인은 이걸 어떻게 다시 쪼개나
+
+**`kafka_producer.py --realistic`** (default 권장)
+
+```
+Criteo 1 row (wide)
+   │
+   ▼ kafka_producer.py가 시간차 분리 발행
+┌──────────────┬──────────┬──────────────┐
+│ ad-impressions│ ad-clicks│ ad-conversions│
+│ 즉시         │ +1~30초  │ +1초~며칠     │
+└──────────────┴──────────┴──────────────┘
+   │              │             │
+   ▼              ▼             ▼
+       Bronze (S3 raw parquet, 3 topic 통합)
+                  │
+                  ▼ Spark MERGE (event_id 키)
+       Silver (Iceberg processed_events)
+                  │ event_type 컬럼 (impression/click/conversion)
+                  │ + attribution_lastclick / attribution_evencredit
+                  ▼
+       Gold (Iceberg campaign_summary_daily)
+```
+
+**왜 시간차로 쪼개나** — 광고 운영의 실제 모습은 노출과 전환이 다른 시간에 도착함. Criteo가 사후 결합한 wide format을 우리가 "다시 흩뿌려서" 운영 환경을 시뮬. 이게 **late-arriving conversion 멱등성·MERGE 시연**의 본질이고, Iceberg를 채택한 이유.
+
+**Basic 모드(`--realistic` 빼고)**도 가능 — 1 row → 1 토픽(`ad-events`)에 그대로. click/conversion 컬럼 그대로 wide. 빠른 데모 용도.
+
+### 라이센스
+
+CC BY-NC-SA 4.0 — 비상업·동일조건·저작자 표시. 발표·포트폴리오 OK, 사업화 X.
+
+---
+
 ## 데이터 준비 (S1.5 — 최초 1회)
 
 > Criteo Attribution Dataset (16.4M 이벤트 / 30일 / 700+ 캠페인) → Bronze 입력 CSV 생성.
