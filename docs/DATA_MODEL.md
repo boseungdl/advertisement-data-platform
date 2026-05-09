@@ -21,12 +21,13 @@ Criteo CSV → Kafka → Bronze → Silver → Gold
 
 ## 2. 테이블 명세
 
-### 🟫 Bronze — `raw_files` (Parquet, Iceberg 아님)
+### 🟫 Bronze — `raw_files` (Parquet, Iceberg 아님) — [ADR-008](adr/0008-bronze-on-s3.md)
 
-- **위치**: 로컬 `/warehouse/raw/ad-events/`
+- **위치**: AWS S3 `s3://<bucket>/lakehouse/ads/raw/ad-events/`
 - **파티션**: `raw_date=YYYY-MM-DD/raw_hour=HH/`
-- **보존**: 90일 (백필 안전 윈도우)
+- **보존**: 90일 (백필 안전 윈도우, 90일 후 Glacier transition 검토)
 - **변환**: 없음. Kafka payload 그대로 보존.
+- **카탈로그**: 미등록(선택적). Spark에서 경로로 직접 read.
 
 | 컬럼 | 타입 | 설명 |
 |---|---|---|

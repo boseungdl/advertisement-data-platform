@@ -56,7 +56,7 @@ Criteo CSV
   → kafka_producer.py (호스트 Python)
   → Kafka topic ad-events (3 partition)
   → Spark Structured Streaming (Local Mode, 5분 micro-batch)
-  → Bronze parquet (로컬 /warehouse/raw, raw_date/raw_hour 파티션)
+  → Bronze parquet (S3 s3://<bucket>/lakehouse/ads/raw/, raw_date/raw_hour 파티션) [ADR-008]
   → Spark Batch MERGE (15분 주기, 최근 7일 윈도우)
   → Silver Iceberg processed_events (S3 + Glue, event_date 파티션)
   → Spark Batch 집계 (1시간 주기, 최근 7일 rebuild)
@@ -79,10 +79,11 @@ Airflow DAG
 
 > 상세 컬럼·타입은 [docs/DATA_MODEL.md](DATA_MODEL.md) 참고. 여기서는 요약만.
 
-### 🟫 Bronze — `raw_files` (Parquet, 로컬)
-- 위치: `/warehouse/raw/ad-events/raw_date=YYYY-MM-DD/raw_hour=HH/`
+### 🟫 Bronze — `raw_files` (Parquet, S3) — [ADR-008](adr/0008-bronze-on-s3.md)
+- 위치: `s3://<bucket>/lakehouse/ads/raw/ad-events/raw_date=YYYY-MM-DD/raw_hour=HH/`
 - 변환: 없음. Kafka payload 그대로 보존.
-- 보존: 90일 (백필 안전 윈도우)
+- 보존: 90일 (백필 안전 윈도우, 90일 후 Glacier transition 검토)
+- 카탈로그: 미등록 (선택적). Spark에서 경로로 직접 read.
 
 ### 🥈 Silver — `iceberg.ads.processed_events` (S3 + Glue)
 - 파티션: `event_date` (Iceberg hidden partitioning, 일 단위)
@@ -102,9 +103,9 @@ Airflow DAG
 | 단계 | 작업 | 경로 |
 |---|---|---|
 | Kafka topic | 발행/소비 | `ad-events` (3 partition, replication 1) |
-| streaming → Bronze | 쓰기 | `/warehouse/raw/ad-events/raw_date=.../raw_hour=.../` |
-| streaming checkpoint | 쓰기 | `/warehouse/checkpoints/raw-ad-events/` |
-| Bronze → Silver | 읽기 | `/warehouse/raw/ad-events/` (최근 7일) |
+| streaming → Bronze | 쓰기 | `s3://<bucket>/lakehouse/ads/raw/ad-events/raw_date=.../raw_hour=.../` |
+| streaming checkpoint | 쓰기 | `s3://<bucket>/lakehouse/ads/checkpoints/raw-ad-events/` |
+| Bronze → Silver | 읽기 | `s3://<bucket>/lakehouse/ads/raw/ad-events/` (최근 7일) |
 | Silver MERGE | 쓰기 | `s3://<bucket>/lakehouse/ads/processed_events/` |
 | Silver → Gold | 읽기 | `iceberg.ads.processed_events` (최근 7일) |
 | Gold rebuild | 쓰기 | `s3://<bucket>/lakehouse/ads/campaign_summary_daily/` |
@@ -179,6 +180,7 @@ Airflow DAG
 | ADR-004 | Spark = Local Mode | 1GB/일이라 분산 불필요, 100x 시 EMR | 🔄 3단계 |
 | ADR-005 | 오케스트레이션 = Airflow on Docker | 매니지먼트 자동화 표준, 발표 임팩트 | 🔄 3단계 |
 | ADR-006 | BI = QuickSight | 1인 월 약 3.5만, 셋업 빠름 | 🔄 3단계 |
+| ADR-008 | Bronze 위치를 로컬에서 S3로 이전 | 일관성·백업 ↑, 비용 +$2/월 | [작성됨](adr/0008-bronze-on-s3.md) |
 
 ---
 
@@ -189,9 +191,9 @@ Airflow DAG
 ```
 1) AWS 자격증명 export (AWS_PROFILE=iceberg-lab)
 2) S3 버킷 생성 + Glue DB 생성
-3) docker compose up -d --build         # spark-iceberg + airflow + kafka
+3) docker compose up -d --build         # spark-ads + airflow + kafka
 4) python kafka_producer.py --csv ./data/ad_events_sample.csv --speed 500
-5) Spark streaming detach 실행 (kafka_to_raw_files.py)
+5) Spark streaming detach 실행 (kafka_to_bronze.py, S3 출력)
 6) Airflow UI에서 ads_silver_merge_15min DAG unpause
 7) Athena에서 iceberg_ads_db.processed_events SELECT 확인
 8) QuickSight 데이터셋 등록 + 대시보드 import
@@ -211,7 +213,8 @@ Airflow DAG
 ### 100x 스케일 (일 1억 이벤트) 시 깨질 곳
 - **Kafka**: 단일 브로커 → 다중 브로커 + 파티션 N배
 - **Spark**: Local Mode → EMR Cluster Mode (코드는 그대로)
-- **Bronze 저장**: 로컬 디스크 → S3 직접 적재
+- **Bronze S3 비용**: 9TB × $0.023 = ~$200/월 → Glacier transition (90일 후) 정책 추가
+- **S3 prefix throttling**: 단일 prefix 집중 시 → 도메인별 prefix 분리 (`raw/<advertiser_or_domain>/...`)
 - **Iceberg 컴팩션**: 단일 잡 → 분산 매니지먼트 (`partial-progress.enabled`)
 - **Glue Catalog**: 단일 → 도메인별 분리 또는 REST 카탈로그 이전
 
