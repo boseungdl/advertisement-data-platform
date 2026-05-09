@@ -23,10 +23,18 @@ services:
       - ${HOME}/.aws:/home/jovyan/.aws:ro
     environment:
       JUPYTER_TOKEN: iceberg
+      # AWS (S1.4에서 실제 자격증명 주입)
       AWS_PROFILE: ${AWS_PROFILE:-iceberg-lab}
       AWS_REGION: ${AWS_REGION:-ap-northeast-2}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-northeast-2}
       AWS_SDK_LOAD_CONFIG: "1"
+      # Kafka (Spark Streaming 잡이 사용)
+      KAFKA_BOOTSTRAP: ${KAFKA_BOOTSTRAP:-kafka:29092}
+      KAFKA_TOPIC: ${KAFKA_TOPIC:-ad-events}
+      # Iceberg / S3 (S1.4에서 실제 버킷·DB 주입)
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_PREFIX: ${S3_PREFIX:-lakehouse/ads}
+      ICEBERG_DB: ${ICEBERG_DB:-iceberg_ads_db}
     networks:
       - meta-ads
 
