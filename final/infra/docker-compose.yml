@@ -16,11 +16,13 @@ services:
       - "8888:8888"   # Jupyter Notebook
       - "4040:4040"   # Spark UI (job 실행 중에만 활성)
     volumes:
-      - ./notebooks:/home/jovyan/work
-      - ./jobs:/home/jovyan/jobs
-      - ./data:/home/jovyan/data
-      - warehouse:/home/jovyan/warehouse
-      - ${HOME}/.aws:/home/jovyan/.aws:ro
+      - ./notebooks:/home/jovyan/work               # 임시 노트북 (gitignore)
+      - ../code/pipelines:/home/jovyan/jobs         # Spark 잡 코드 (final/code/pipelines)
+      - ../code/ddl:/home/jovyan/ddl                # Iceberg DDL
+      - ../code/health-queries:/home/jovyan/health  # 헬스 쿼리
+      - ./data:/home/jovyan/data                    # 입력 데이터 (Criteo CSV 등, gitignore)
+      - warehouse:/home/jovyan/warehouse            # 로컬 raw zone (named volume)
+      - ${HOME}/.aws:/home/jovyan/.aws:ro           # AWS 자격증명 (빈 폴더라도 ~/.aws 필요)
     environment:
       JUPYTER_TOKEN: iceberg
       # AWS (S1.4에서 실제 자격증명 주입)
