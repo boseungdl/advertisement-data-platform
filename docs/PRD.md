@@ -110,7 +110,7 @@
 |---|---|
 | 가용성 SLA | 99.5% (월 다운타임 3.6시간 이내) |
 | Kafka → Bronze 지연 | P95 1분 |
-| Bronze → Silver MERGE | P95 15분 (5분 주기 배치) |
+| Bronze → Silver MERGE | P95 1시간 (1시간 주기 배치) |
 | Silver → Gold 집계 | P95 1시간 |
 | 처리량 (평소) | 12 events/s |
 | 처리량 (피크) | 30 events/s |

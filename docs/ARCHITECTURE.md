@@ -57,7 +57,7 @@ Criteo CSV
   → Kafka topic ad-events (3 partition)
   → Spark Structured Streaming (Local Mode, 5분 micro-batch)
   → Bronze parquet (S3 s3://<bucket>/lakehouse/ads/raw/, raw_date/raw_hour 파티션) [ADR-008]
-  → Spark Batch MERGE (15분 주기, 최근 7일 윈도우)
+  → Spark Batch MERGE (1시간 주기, 최근 7일 윈도우)
   → Silver Iceberg processed_events (S3 + Glue, event_date 파티션)
   → Spark Batch 집계 (1시간 주기, 최근 7일 rebuild)
   → Gold Iceberg campaign_summary_daily (S3 + Glue, summary_date 월 파티션)
@@ -66,7 +66,7 @@ Criteo CSV
 
 [병렬]
 Airflow DAG
-  ├─ ads_silver_merge_15min       (15분)
+  ├─ ads_silver_merge_hourly      (매시 정각)
   ├─ ads_gold_summary_hourly      (1시간)
   ├─ ads_iceberg_compaction_daily (매일 03:00 KST)
   ├─ ads_iceberg_expire_daily     (매일 04:00 KST, 30일 초과)
@@ -120,9 +120,9 @@ Airflow DAG
 
 | DAG 이름 | 주기 | 작업 | 의존성 |
 |---|---|---|---|
-| `ads_silver_merge_15min` | */15 * * * * | Bronze → Silver MERGE | 없음 (Bronze는 streaming이 채움) |
-| `ads_gold_summary_hourly` | 5 * * * * (매시 5분) | Silver → Gold 7일 rebuild | `ads_silver_merge_15min` 최근 성공 |
-| `ads_iceberg_compaction_daily` | 0 3 * * * (03:00 KST) | Silver/Gold 작은 파일 합치기 | `ads_silver_merge_15min` 일시 정지 |
+| `ads_silver_merge_hourly` | 0 * * * * (매시 정각) | Bronze → Silver MERGE | 없음 (Bronze는 streaming이 채움) |
+| `ads_gold_summary_hourly` | 30 * * * * (매시 30분) | Silver → Gold 7일 rebuild | `ads_silver_merge_hourly` 최근 성공 |
+| `ads_iceberg_compaction_daily` | 0 3 * * * (03:00 KST) | Silver/Gold 작은 파일 합치기 | `ads_silver_merge_hourly` 일시 정지 |
 | `ads_iceberg_expire_daily` | 0 4 * * * (04:00 KST) | 30일 초과 옛 스냅샷 제거 | compaction 완료 |
 | `ads_iceberg_orphan_weekly` | 0 5 * * 0 (일 05:00 KST) | 고아 파일 청소 | expire 완료 |
 
@@ -160,7 +160,7 @@ Airflow DAG
 |---|---|
 | 가용성 SLA | 99.5% (월 다운타임 ≤ 3.6시간) |
 | Kafka → Bronze 지연 | P95 1분 |
-| Bronze → Silver MERGE | P95 15분 |
+| Bronze → Silver MERGE | P95 1시간 (1시간 주기 배치) |
 | Silver → Gold 집계 | P95 1시간 |
 | 처리량 (평소 / 피크) | 12 / 30 events/s |
 | 보존 (핫 / 콜드 / raw) | 7일 / 30일 / 90일 |
@@ -194,7 +194,7 @@ Airflow DAG
 3) docker compose up -d --build         # spark-ads + airflow + kafka
 4) python kafka_producer.py --csv ./data/ad_events_sample.csv --speed 500
 5) Spark streaming detach 실행 (kafka_to_bronze.py, S3 출력)
-6) Airflow UI에서 ads_silver_merge_15min DAG unpause
+6) Airflow UI에서 ads_silver_merge_hourly DAG unpause
 7) Athena에서 iceberg_ads_db.processed_events SELECT 확인
 8) QuickSight 데이터셋 등록 + 대시보드 import
 ```

@@ -109,7 +109,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 **Naming**
 - Iceberg table: `iceberg.ads.<purpose>` (예: `ads.processed_events`)
-- Airflow DAG: `ads_<purpose>_<freq>` (예: `ads_silver_merge_15min`)
+- Airflow DAG: `ads_<purpose>_<freq>` (예: `ads_silver_merge_hourly`)
 - AWS resource: `<env>-ads-<purpose>` (예: `dev-ads-warehouse`)
 - 필수 태그: `env`, `owner`, `project=meta-ads`
 

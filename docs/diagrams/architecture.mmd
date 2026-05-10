@@ -2,7 +2,7 @@
 flowchart LR
     A[Criteo CSV] -->|발행| B[Kafka<br/>ad-events]
     B -->|Streaming<br/>5분| C[Bronze<br/>raw parquet<br/>S3]
-    C -->|MERGE<br/>15분| D[(Silver<br/>processed_events<br/>S3 + Glue)]
+    C -->|MERGE<br/>1시간| D[(Silver<br/>processed_events<br/>S3 + Glue)]
     D -->|집계<br/>1시간| E[(Gold<br/>campaign_summary<br/>S3 + Glue)]
     E -->|쿼리| F[Athena]
     F --> G[QuickSight<br/>비즈니스 / 운영]

@@ -176,7 +176,7 @@
 **[화면]** README §2 다이어그램 + 환경 분리·카탈로그·100x 매핑 단락.
 
 **대본**:
-> "흐름 자체는 다이어그램에 다 있습니다 — Criteo 데이터가 Kafka로 들어와 Spark Streaming이 5분 단위로 받아 Bronze에 쌓고, 15분 주기 MERGE로 Silver, 1시간 주기로 Gold, 그 위에 Athena 쿼리와 QuickSight 대시보드, 그리고 Airflow가 매니지먼트 자동화."
+> "흐름 자체는 다이어그램에 다 있습니다 — Criteo 데이터가 Kafka로 들어와 Spark Streaming이 5분 단위로 받아 Bronze에 쌓고, 1시간 주기로 Silver MERGE, 같은 1시간 주기로 Gold 집계, 그 위에 Athena 쿼리와 QuickSight 대시보드, 그리고 Airflow가 매니지먼트 자동화."
 >
 > "**환경 분리** 한 가지만 짚으면 — 처리(Kafka·Spark·Airflow)는 로컬 도커, 저장과 분석(S3·Iceberg·Glue·Athena·QuickSight)은 AWS로 분리했습니다. 이유는 비용 — Kafka·Spark는 항상 떠 있어야 하는데 AWS에 올리면 작은 환경에서도 월 수십만원이 나옵니다. 100x 시점에 EMR/EKS·MSK로 옮길 계획입니다."
 >

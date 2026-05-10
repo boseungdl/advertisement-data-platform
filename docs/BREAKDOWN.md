@@ -85,7 +85,7 @@ PRD §3 MoSCoW 기준:
 | S3.3 | 멱등성 자동 테스트 (같은 윈도우 2회 → 결과 동일) | 1 |
 | S3.4 | late-arriving conversion 시뮬레이션 + 검증 (5일 늦은 conv 흘려보내기) | 1 |
 | S3.5 | Last-click / Even-credit 두 어트리뷰션 컬럼 채우기 (S1) | 1 |
-| S3.6 | Airflow DAG `ads_silver_merge_15min` 등록 | 1 |
+| S3.6 | Airflow DAG `ads_silver_merge_hourly` 등록 | 1 |
 
 ---
 
