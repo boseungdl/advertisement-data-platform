@@ -4,9 +4,23 @@
 # Claude Code local settings
 .claude/
 
-# External demo repo (separate git history)
-iceberg-lakehouse-lab/
 
 # Docker mount 자동 생성 폴더 (임시 노트북, 입력 데이터)
 final/infra/notebooks/
 final/infra/data/
+final/
+iceberg-lakehouse-lab-demo/
+iceberg-lakehouse-lab-refer/
+
+# 옛 자료 / 작업 메모 (final2만 추적)
+2회차/
+*.docx
+/infra.md
+/important.md
+/11.md
+/README.md
+/README2.md
+
+./data
+/data
+
