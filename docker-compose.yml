@@ -1,0 +1,5 @@
+# docker-compose.yml
+# Iceberg Lakehouse Lab — 로컬 인프라 스택 (Kafka, Spark, Iceberg REST catalog, MinIO 등)
+# TODO: 서비스 정의 작성
+
+services: {}
